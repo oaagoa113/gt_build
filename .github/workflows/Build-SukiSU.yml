@@ -90,10 +90,34 @@ jobs:
       - name: Initialize repo with local manifest
         run: |
           mkdir -p $GITHUB_WORKSPACE/kernel_workspace && cd $GITHUB_WORKSPACE/kernel_workspace
-          mkdir -p .repo/manifests
+          
+          # Инициализируем с AOSP пустым манифестом
+          repo init -u https://android.googlesource.com/platform/manifest -b master --depth=1
+          
+          # Заменяем манифест на ваш
+          rm -f .repo/manifests/default.xml
           cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml .repo/manifests/default.xml
-          repo init -u file://$GITHUB_WORKSPACE/kernel_workspace --depth=1
+          
+          # Важно: перерегистрируем манифест
+          cd .repo/manifests
+          git add .
+          git commit -m "Replace with Realme GT Neo6 manifest"
+          cd ../..
+          
+          # Синхронизация для загрузки именно ваших исходников ядра
           repo sync -c --no-clone-bundle --no-tags
+          
+          # Удаление проверок защищенных экспортов
+          if [ -e kernel_platform/common/BUILD.bazel ]; then
+            sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/common/BUILD.bazel
+          fi
+          if [ -e kernel_platform/msm-kernel/BUILD.bazel ]; then
+            sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/msm-kernel/BUILD.bazel
+          fi
+          rm -f kernel_platform/common/android/abi_gki_protected_exports_* || echo "No protected exports!"
+          rm -f kernel_platform/msm-kernel/android/abi_gki_protected_exports_* || echo "No protected exports!"
+          sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion || echo "No setlocalversion file!"
+          sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion || echo "No setlocalversion file!"
 
       - name: SukiSU-Ultra & SukiSU version
         if: ${{ github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' || github.event.inputs.kernelsu_variant == 'SukiSU' }}
