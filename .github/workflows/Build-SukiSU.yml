@@ -52,11 +52,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        
       - name: Maximize build space
         uses: easimon/maximize-build-space@master
         with:
@@ -84,28 +80,31 @@ jobs:
           chmod a+x ~/repo
           sudo mv ~/repo /usr/local/bin/repo
 
-      - name: Initialize repo and sync
+      - name: Checkout gt_build (manifest source)
+        run: |
+          cd $GITHUB_WORKSPACE
+          git clone https://github.com/oaagoa113/gt_build.git gt_build --depth=1
+
+      - name: Initialize repo with local manifest
         run: |
           mkdir -p $GITHUB_WORKSPACE/kernel_workspace && cd $GITHUB_WORKSPACE/kernel_workspace
           mkdir -p .repo/manifests
-          cp $GITHUB_WORKSPACE/manifest_realme.xml .repo/manifests/default.xml
+          cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml .repo/manifests/default.xml
           repo init -u . --depth=1
           repo sync -c --no-clone-bundle --no-tags
 
-              
-          # Удаление проверок защищенных экспортов для успешной сборки
+          # Удаление проверок защищенных экспортов
           if [ -e kernel_platform/common/BUILD.bazel ]; then
             sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/common/BUILD.bazel
           fi
-          
           if [ -e kernel_platform/msm-kernel/BUILD.bazel ]; then
             sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/msm-kernel/BUILD.bazel
           fi
-          
           rm kernel_platform/common/android/abi_gki_protected_exports_* || echo "No protected exports!"
           rm kernel_platform/msm-kernel/android/abi_gki_protected_exports_* || echo "No protected exports!"
-          sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion || echo "No setlocalversion file!"
-          sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion || echo "No msm-kernel setlocalversion file!"
+          sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
+          sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
+          sed -i 's/ -dirty//g' kernel_platform/external/dtc/scripts/setlocalversion
       
       - name: SukiSU-Ultra & SukiSU version
         if: ${{ github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' || github.event.inputs.kernelsu_variant == 'SukiSU' }}
@@ -183,12 +182,6 @@ jobs:
       - name: Add SUSFS Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform
-          # Создаем директорию конфигурации, если её нет
-          mkdir -p ./common/arch/arm64/configs
-          
-          # Создаем конфигурационный файл, если его нет
-          touch ./common/arch/arm64/configs/gki_defconfig
-          
           # Добавление KSU конфигурации
           echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
 
@@ -219,40 +212,24 @@ jobs:
             echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./common/arch/arm64/configs/gki_defconfig
           fi
           
-          # Поиск и модификация build.config
-          if [ -f "./common/build.config.gki" ]; then
-            sed -i 's/check_defconfig//' ./common/build.config.gki
-          fi
+          # Удаление проверки defconfig
+          sed -i 's/check_defconfig//' ./common/build.config.gki
 
       - name: Add make name
         run: |
           cd kernel_workspace/kernel_platform
           if [[ "${{ github.event.inputs.KERNEL_VERSION }}" == "6.1" || "${{ github.event.inputs.KERNEL_VERSION }}" == "6.6" ]]; then
-            if [ -f "./build/kernel/kleaf/impl/stamp.bzl" ]; then
-              sed -i "/stable_scmversion_cmd/s/-maybe-dirty//g" ./build/kernel/kleaf/impl/stamp.bzl
-            fi
+            sed -i "/stable_scmversion_cmd/s/-maybe-dirty//g" ./build/kernel/kleaf/impl/stamp.bzl
           fi
-          if [ -f "./common/scripts/setlocalversion" ]; then
-            sed -i '$s|echo "\$res"|echo "\${{ github.event.inputs.KERNEL_NAME }}"|' ./common/scripts/setlocalversion
-          fi
+          sed -i '$s|echo "\$res"|echo "\${{ github.event.inputs.KERNEL_NAME }}"|' ./common/scripts/setlocalversion
   
       - name: Build kernel
         run: |
           cd kernel_workspace
-          
-          # Проверка наличия файла build_with_bazel.py
-          if [ -f "./kernel_platform/build_with_bazel.py" ]; then
+          if [[ "${{ github.event.inputs.KERNEL_VERSION }}" == "6.1" || "${{ github.event.inputs.KERNEL_VERSION }}" == "6.6" ]]; then
             ./kernel_platform/build_with_bazel.py -t kalama gki --action_env=KSU_VERSION
-          elif [ -f "./kernel_platform/build/build.sh" ]; then
-            LTO=thin ./kernel_platform/build/build.sh
           else
-            # Резервный метод сборки
-            cd kernel_platform/common
-            export ARCH=arm64
-            export CROSS_COMPILE=aarch64-linux-android-
-            export CROSS_COMPILE_ARM32=arm-linux-androideabi-
-            make gki_defconfig
-            make -j$(nproc --all)
+            LTO=thin ./kernel_platform/build/build.sh
           fi
          
       - name: Make AnyKernel3
@@ -290,72 +267,53 @@ jobs:
           patch_vbmeta_flag=auto;
           EOF
           
-          # Поиск образа ядра в разных директориях
-          kernel_images=(
-            "./kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/Image"
-            "./kernel_workspace/kernel_platform/common/out/arch/arm64/boot/Image"
-            "./kernel_workspace/kernel_platform/out/kalama-kalama-gki/dist/Image"
-          )
-          
-          image_found=false
-          for img in "${kernel_images[@]}"; do
-            if [ -f "$img" ]; then
-              cp "$img" ./AnyKernel3/Image
-              mkdir -p ./kernel_workspace/kernel/
-              cp "$img" ./kernel_workspace/kernel/Image
-              image_found=true
-              echo "Образ ядра найден в $img"
-              break
-            fi
-          done
-          
-          # Поиск образа ядра по всему дереву, если не найден выше
-          if [ "$image_found" = false ]; then
-            image_path=$(find "./kernel_workspace" -name "Image" | head -n 1)
-            if [ -n "$image_path" ] && [ -f "$image_path" ]; then
-              cp "$image_path" ./AnyKernel3/Image
-              mkdir -p ./kernel_workspace/kernel/
-              cp "$image_path" ./kernel_workspace/kernel/Image
-              image_found=true
-              echo "Образ ядра найден в $image_path"
-            fi
+          # Поиск образа ядра
+          dir1="./kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/"
+          dir2="./kernel_workspace/kernel_platform/common/out/arch/arm64/boot/"
+          dir3="./kernel_workspace/kernel_platform/out/kalama-kalama-gki/dist/"
+          target1="./AnyKernel3/"
+          target2="./kernel_workspace/kernel"
+
+          if find "$dir1" -name "Image" | grep -q "Image"; then
+            image_path="$dir1"Image
+          elif find "$dir2" -name "Image" | grep -q "Image"; then
+            image_path="$dir2"Image
+          elif find "$dir3" -name "Image" | grep -q "Image"; then
+            image_path="$dir3"Image
+          else
+            image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
           fi
-          
-          if [ "$image_found" = false ]; then
+
+          if [ -n "$image_path" ] && [ -f "$image_path" ]; then
+            mkdir -p "$dir1"
+            if [ "$(realpath "$image_path")" != "$(realpath "$dir1"Image)" ]; then
+              cp "$image_path" "$dir1"
+            else
+              echo "Источник и назначение совпадают, пропуск копирования"
+            fi
+          else
             echo "Образ ядра не найден, сборка возможно завершилась с ошибкой"
-            # Не прерываем сборку, продолжаем с пустым архивом
+            exit 1
           fi
 
       - name: Apply patch_linux and replace Image
         if: ${{ github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' && github.event.inputs.KPM_ENABLED == 'true' }}
         run: |
-          if [ -f "./AnyKernel3/Image" ]; then
-            # Создание временной директории
-            mkdir -p temp_patch_dir
-            cd temp_patch_dir
-            
-            # Загрузка патчера
-            curl -LO https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/releases/download/0.11-beta/patch_linux
-            chmod +x patch_linux
-            
-            # Копирование образа и патчинг
-            cp $GITHUB_WORKSPACE/AnyKernel3/Image ./Image
-            ./patch_linux
-            
-            if [ -f "./oImage" ]; then
-              # Замена образов
-              cp ./oImage $GITHUB_WORKSPACE/AnyKernel3/Image
-              mkdir -p $GITHUB_WORKSPACE/kernel_workspace/kernel/
-              cp ./oImage $GITHUB_WORKSPACE/kernel_workspace/kernel/Image
-              echo "Образ успешно пропатчен для KPM"
-            else
-              echo "Ошибка патчинга образа для KPM"
-            fi
-            
-            cd ..
-          else
-            echo "Образ ядра не найден для патчинга KPM"
-          fi
+          cd kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist
+          curl -LO https://github.com/ShirkNeko/SukiSU_KernelPatch_patch/releases/download/0.11-beta/patch_linux
+          chmod +x patch_linux
+          ./patch_linux
+          rm -f Image
+          mv oImage Image
+          cp Image $GITHUB_WORKSPACE/AnyKernel3/Image
+          cp Image $GITHUB_WORKSPACE/kernel_workspace/kernel
+
+      - name: Copy Image without KPM
+        if: ${{ !(github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' && github.event.inputs.KPM_ENABLED == 'true') }}
+        run: |
+          cd kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist
+          cp Image $GITHUB_WORKSPACE/AnyKernel3/Image
+          cp Image $GITHUB_WORKSPACE/kernel_workspace/kernel
          
       - name: Upload AnyKernel3
         uses: actions/upload-artifact@v4
@@ -367,4 +325,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Image_Realme_GTNeo6_KernelSU_${{ env.KSUVER }}
-          path: ./kernel_workspace/kernel/ 
+          path: kernel_workspace/kernel 
