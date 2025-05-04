@@ -86,12 +86,13 @@ jobs:
 
       - name: Initialize repo and sync
         run: |
-          mkdir kernel_workspace && cd kernel_workspace
+          mkdir -p $GITHUB_WORKSPACE/kernel_workspace && cd $GITHUB_WORKSPACE/kernel_workspace
           mkdir -p .repo/manifests
           cp $GITHUB_WORKSPACE/manifest_realme.xml .repo/manifests/default.xml
           repo init -u . --depth=1
           repo sync -c --no-clone-bundle --no-tags
-          
+
+              
           # Удаление проверок защищенных экспортов для успешной сборки
           if [ -e kernel_platform/common/BUILD.bazel ]; then
             sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/common/BUILD.bazel
