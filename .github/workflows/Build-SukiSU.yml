@@ -13,7 +13,7 @@ on:
       KERNEL_NAME:
         description: "Суффикс имени ядра"
         required: true
-        default: '.75-android14-11-o-g1a715a82feea'
+        default: '-android14-realme-gtneo6-sukisu'
       kernelsu_variant:
         description: "Выбор SukiSU"
         required: true
@@ -85,11 +85,19 @@ jobs:
           cd $GITHUB_WORKSPACE
           git clone https://github.com/oaagoa113/gt_build.git gt_build --depth=1
 
+      - name: Setup local manifest repo
+        run: |
+          mkdir -p $GITHUB_WORKSPACE/kernel_workspace/.repo/manifests
+          cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml $GITHUB_WORKSPACE/kernel_workspace/.repo/manifests/default.xml
+
+          cd $GITHUB_WORKSPACE/kernel_workspace
+          git init
+          git add .repo/manifests/default.xml
+          git commit -m "Add local manifest"
+
       - name: Initialize repo with local manifest
         run: |
-          mkdir -p $GITHUB_WORKSPACE/kernel_workspace && cd $GITHUB_WORKSPACE/kernel_workspace
-          mkdir -p .repo/manifests
-          cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml .repo/manifests/default.xml
+          cd $GITHUB_WORKSPACE/kernel_workspace
           repo init -u . --depth=1
           repo sync -c --no-clone-bundle --no-tags
 
@@ -105,7 +113,7 @@ jobs:
           sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
           sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
           sed -i 's/ -dirty//g' kernel_platform/external/dtc/scripts/setlocalversion
-      
+
       - name: SukiSU-Ultra & SukiSU version
         if: ${{ github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' || github.event.inputs.kernelsu_variant == 'SukiSU' }}
         run: |
@@ -114,7 +122,7 @@ jobs:
           elif [[ "${{ github.event.inputs.kernelsu_version }}" == "main" ]]; then
             echo "BRANCH=-s susfs-dev" >> $GITHUB_ENV
           fi
-          
+
       - name: Add SukiSU-Ultra
         if: ${{ github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' }}
         run: |
@@ -136,43 +144,37 @@ jobs:
           echo "KSUVER=$KSU_VERSION" >> $GITHUB_ENV
           export KSU_VERSION=$KSU_VERSION
           sed -i "s/DKSU_VERSION=16/DKSU_VERSION=${KSU_VERSION}/" kernel/Makefile
-          
+
       - name: Apply SUSFS Patches
         if: ${{ github.event.inputs.SUSFS_ENABLED == 'true' }}
         run: |
           cd kernel_workspace
           git clone https://gitlab.com/shirkneko/susfs4ksu.git -b gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}
           cd kernel_platform
-
-          # Copy SUSFS patches
           cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
           mkdir -p ./common/fs/
           mkdir -p ./common/include/linux/
           cp -r ../susfs4ksu/kernel_patches/fs/* ./common/fs/
           cp -r ../susfs4ksu/kernel_patches/include/linux/* ./common/include/linux/
-          
           echo "Применение SUSFS патчей для ядра"
           cd ./common
           patch -p1 < 50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch || true
           echo "Завершено"
-          
+
       - name: Apply KPM Support
         if: ${{ github.event.inputs.KPM_ENABLED == 'true' && github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' }}
         run: |
           cd kernel_workspace
           git clone https://github.com/ShirkNeko/SukiSU_KernelPatch_patch.git
           cd kernel_platform/common
-          
-          # Добавление поддержки KPM
           echo "CONFIG_KPM=y" >> ./arch/arm64/configs/gki_defconfig
           echo "Поддержка KPM добавлена"
-         
+
       - name: Apply New Hooks Patches
         if: ${{ github.event.inputs.VFS_patch_ENABLED == 'enable' }}
         run: |
           cd kernel_workspace
           git clone https://github.com/ShirkNeko/SukiSU_patch.git
-          
           cd kernel_platform/common
           cp ../../SukiSU_patch/hooks/syscall_hooks.patch ./
           echo "Применение VFS патчей"
@@ -182,18 +184,13 @@ jobs:
       - name: Add SUSFS Configuration Settings
         run: |
           cd kernel_workspace/kernel_platform
-          # Добавление KSU конфигурации
           echo "CONFIG_KSU=y" >> ./common/arch/arm64/configs/gki_defconfig
-
-          # Добавление VFS конфигурации
           if [[ "${{ github.event.inputs.VFS_patch_ENABLED }}" == 'enable' ]]; then
             echo "CONFIG_KSU_SUSFS_SUS_SU=n" >> ./common/arch/arm64/configs/gki_defconfig
             echo "CONFIG_KSU_MANUAL_HOOK=y" >> ./common/arch/arm64/configs/gki_defconfig
           else
             echo "CONFIG_KSU_SUSFS_SUS_SU=y" >> ./common/arch/arm64/configs/gki_defconfig
           fi
-          
-          # Добавление SUSFS конфигурации
           if [[ "${{ github.event.inputs.SUSFS_ENABLED }}" == 'true' ]]; then
             echo "CONFIG_KSU_SUSFS=y" >> ./common/arch/arm64/configs/gki_defconfig
             echo "CONFIG_KSU_SUSFS_HAS_MAGIC_MOUNT=y" >> ./common/arch/arm64/configs/gki_defconfig
@@ -211,8 +208,6 @@ jobs:
             echo "CONFIG_KSU_SUSFS_SPOOF_CMDLINE_OR_BOOTCONFIG=y" >> ./common/arch/arm64/configs/gki_defconfig
             echo "CONFIG_KSU_SUSFS_OPEN_REDIRECT=y" >> ./common/arch/arm64/configs/gki_defconfig
           fi
-          
-          # Удаление проверки defconfig
           sed -i 's/check_defconfig//' ./common/build.config.gki
 
       - name: Add make name
@@ -222,7 +217,7 @@ jobs:
             sed -i "/stable_scmversion_cmd/s/-maybe-dirty//g" ./build/kernel/kleaf/impl/stamp.bzl
           fi
           sed -i '$s|echo "\$res"|echo "\${{ github.event.inputs.KERNEL_NAME }}"|' ./common/scripts/setlocalversion
-  
+
       - name: Build kernel
         run: |
           cd kernel_workspace
@@ -231,19 +226,13 @@ jobs:
           else
             LTO=thin ./kernel_platform/build/build.sh
           fi
-         
+
       - name: Make AnyKernel3
         run: |
           git clone https://github.com/Kernel-SU/AnyKernel3 --depth=1
           rm -rf ./AnyKernel3/.git
-          
-          # Настройка AnyKernel3 для Realme GT Neo6
           cat > ./AnyKernel3/anykernel.sh << 'EOF'
           # AnyKernel3 Ramdisk Mod Script
-          # osm0sis @ xda-developers
-
-          ## AnyKernel setup
-          # begin properties
           properties() { '
           kernel.string=Realme GT Neo6 with SukiSU-Ultra + KPM + SUSFS
           do.devicecheck=0
@@ -254,45 +243,27 @@ jobs:
           device.name1=neo6
           device.name2=GTneo6
           device.name3=RMX3840
-          device.name4=
-          device.name5=
           supported.versions=
           '; }
-          # end properties
-
-          # shell variables
           block=/dev/block/bootdevice/by-name/boot;
           is_slot_device=1;
           ramdisk_compression=auto;
           patch_vbmeta_flag=auto;
           EOF
-          
-          # Поиск образа ядра
           dir1="./kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist/"
           dir2="./kernel_workspace/kernel_platform/common/out/arch/arm64/boot/"
-          dir3="./kernel_workspace/kernel_platform/out/kalama-kalama-gki/dist/"
-          target1="./AnyKernel3/"
-          target2="./kernel_workspace/kernel"
-
           if find "$dir1" -name "Image" | grep -q "Image"; then
             image_path="$dir1"Image
           elif find "$dir2" -name "Image" | grep -q "Image"; then
             image_path="$dir2"Image
-          elif find "$dir3" -name "Image" | grep -q "Image"; then
-            image_path="$dir3"Image
           else
             image_path=$(find "./kernel_workspace/kernel_platform/common/out/" -name "Image" | head -n 1)
           fi
-
           if [ -n "$image_path" ] && [ -f "$image_path" ]; then
             mkdir -p "$dir1"
-            if [ "$(realpath "$image_path")" != "$(realpath "$dir1"Image)" ]; then
-              cp "$image_path" "$dir1"
-            else
-              echo "Источник и назначение совпадают, пропуск копирования"
-            fi
+            cp "$image_path" "$dir1"
           else
-            echo "Образ ядра не найден, сборка возможно завершилась с ошибкой"
+            echo "Образ ядра не найден"
             exit 1
           fi
 
@@ -308,21 +279,8 @@ jobs:
           cp Image $GITHUB_WORKSPACE/AnyKernel3/Image
           cp Image $GITHUB_WORKSPACE/kernel_workspace/kernel
 
-      - name: Copy Image without KPM
-        if: ${{ !(github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' && github.event.inputs.KPM_ENABLED == 'true') }}
-        run: |
-          cd kernel_workspace/kernel_platform/out/msm-kernel-kalama-gki/dist
-          cp Image $GITHUB_WORKSPACE/AnyKernel3/Image
-          cp Image $GITHUB_WORKSPACE/kernel_workspace/kernel
-         
-      - name: Upload AnyKernel3
+      - name: Upload Artifacts
         uses: actions/upload-artifact@v4
         with:
           name: AnyKernel3_Realme_GTNeo6_KernelSU_${{ env.KSUVER }}
           path: ./AnyKernel3/*
-
-      - name: Upload Image
-        uses: actions/upload-artifact@v4
-        with:
-          name: Image_Realme_GTNeo6_KernelSU_${{ env.KSUVER }}
-          path: kernel_workspace/kernel 
