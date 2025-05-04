@@ -90,9 +90,15 @@ jobs:
       - name: Initialize repo with local manifest
         run: |
           mkdir -p $GITHUB_WORKSPACE/kernel_workspace && cd $GITHUB_WORKSPACE/kernel_workspace
-          mkdir -p .repo/manifests
-          cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml .repo/manifests/default.xml
-          repo init -u . --depth=1
+          
+          # Инициализация репозитория с URL вместо локальной директории
+          repo init -u https://android.googlesource.com/kernel/manifest -b common-android14-6.1 --depth=1
+          
+          # Копирование локального манифеста
+          mkdir -p .repo/local_manifests
+          cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml .repo/local_manifests/realme.xml
+          
+          # Синхронизация репозитория
           repo sync -c --no-clone-bundle --no-tags
 
           # Удаление проверок защищенных экспортов
