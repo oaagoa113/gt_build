@@ -1,29 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <manifest>
-  <remote fetch="https://github.com/realme-kernel-opensource" name="origin"/>
+  <remote fetch="https://github.com/realme-kernel-opensource" name="realme"/>
   <remote fetch="https://git.codelinaro.org/clo/la" name="clo-la"/>
-  <default remote="origin" revision="master" sync-c="true" sync-tags="false"/>
-
-  <!-- Ядро Realme GT Neo6 -->
-  <project name="realme_gt6-AndroidV-kernel-source" path="kernel_platform/common" revision="master">
+  <default remote="realme" revision="master" sync-c="true" sync-tags="false"/>
+  
+  <project name="realme_gtneo6-AndroidV-kernel-source" path="kernel_platform/common" revision="master">
     <linkfile dest="kernel_platform/.source_date_epoch_dir" src="."/>
     <linkfile dest="kernel_platform/WORKSPACE" src="bazel.WORKSPACE"/>
     <linkfile dest="kernel_platform/build_with_bazel.py" src="build_with_bazel.py"/>
   </project>
-
-  <!-- MSM ядро -->
+  
   <project name="kernel_msm-5.10" path="kernel_platform/msm-kernel" revision="master"/>
+  
+  <project remote="realme" name="android_kernel_platform_build" path="kernel_platform/build" revision="master"/>
+  <project remote="realme" name="android_kernel_platform_prebuilts_boot-artifacts" path="kernel_platform/prebuilts/boot-artifacts" revision="master"/>
+  <project remote="realme" name="android_kernel_platform_prebuilts_build-tools" path="kernel_platform/prebuilts/build-tools" revision="master"/>
+  <project remote="realme" name="android_kernel_platform_prebuilts_clang-tools" path="kernel_platform/prebuilts/clang-tools" revision="master"/>
+  <project remote="realme" name="android_kernel_platform_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9" path="kernel_platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" revision="master"/>
+  <project remote="realme" name="android_kernel_platform_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9" path="kernel_platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9" revision="master"/>
+  <project remote="realme" name="android_kernel_platform_tools_bazel" path="kernel_platform/tools/bazel" revision="master"/>
 
-  <!-- Прочие зависимости -->
-  <project name="android_kernel_platform_build" path="kernel_platform/build" revision="master"/>
-  <project name="android_kernel_platform_prebuilts_boot-artifacts" path="kernel_platform/prebuilts/boot-artifacts" revision="master"/>
-  <project name="android_kernel_platform_prebuilts_build-tools" path="kernel_platform/prebuilts/build-tools" revision="master"/>
-  <project name="android_kernel_platform_prebuilts_clang-tools" path="kernel_platform/prebuilts/clang-tools" revision="master"/>
-  <project name="android_kernel_platform_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9" path="kernel_platform/prebuilts/gcc/linux-x86/aarch64/aarch64-linux-android-4.9" revision="master"/>
-  <project name="android_kernel_platform_prebuilts_gcc_linux-x86_arm_arm-linux-androideabi-4.9" path="kernel_platform/prebuilts/gcc/linux-x86/arm/arm-linux-androideabi-4.9" revision="master"/>
-  <project name="android_kernel_platform_tools_bazel" path="kernel_platform/tools/bazel" revision="master"/>
-
-  <!-- Проекты Codelinaro -->
   <project remote="clo-la" name="kernel_platform/external/dtc" path="kernel_platform/external/dtc" revision="3a8c1bbce993f9143835c7f40eeefcdf948cfaf5" clone-depth="1"/>
   <project remote="clo-la" name="kernel_platform/build/bazel_common_rules" path="kernel_platform/build/bazel_common_rules" revision="449274a8154d1b5357e43b0bf801e2452dd0dee3" clone-depth="1"/>
   <project remote="clo-la" name="kernel_platform/external/bazel-skylib" path="kernel_platform/external/bazel-skylib" revision="7fdbc462f5001b7e82f026aa90bd43c494e2a8d8" clone-depth="1"/>
@@ -32,9 +28,8 @@
   <project remote="clo-la" name="kernel_platform/prebuilts/bazel/linux-x86_64" path="kernel_platform/prebuilts/bazel/linux-x86_64" revision="eee09422f02e60f28192bcb5a8ce8660baba6706" clone-depth="1"/>
   <project remote="clo-la" name="kernel_platform/system/tools/mkbootimg" path="kernel_platform/tools/mkbootimg" revision="b17f184a20744a7e0a421f901bdf20a23be22b07" clone-depth="1"/>
   
-  <!-- Компиляторы -->
   <project remote="clo-la" name="kernelplatform/prebuilts-master/clang/host/linux-x86" path="kernel_platform/prebuilts/clang/host/linux-x86" revision="1e463d6dc1917bda7eac52ffd2e96043d79ade7a" clone-depth="1"/>
   <project remote="clo-la" name="kernelplatform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8" path="kernel_platform/prebuilts/gcc/linux-x86/host/x86_64-linux-glibc2.17-4.8" revision="dd099b5d68822602228e2af66693e61e7b54e0a9" clone-depth="1">
     <linkfile dest="kernel_platform/build/build-tools/sysroot" src="sysroot"/>
   </project>
-</manifest>
+</manifest> 
