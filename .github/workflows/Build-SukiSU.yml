@@ -90,30 +90,11 @@ jobs:
       - name: Initialize repo with local manifest
         run: |
           mkdir -p $GITHUB_WORKSPACE/kernel_workspace && cd $GITHUB_WORKSPACE/kernel_workspace
-          
-          # Инициализация репозитория с URL вместо локальной директории
-          repo init -u https://android.googlesource.com/kernel/manifest -b common-android14-6.1 --depth=1
-          
-          # Копирование локального манифеста
-          mkdir -p .repo/local_manifests
-          cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml .repo/local_manifests/realme.xml
-          
-          # Синхронизация репозитория
+          mkdir -p .repo/manifests
+          cp $GITHUB_WORKSPACE/gt_build/manifest_realme.xml .repo/manifests/default.xml
+          repo init -u file://$GITHUB_WORKSPACE/kernel_workspace --depth=1
           repo sync -c --no-clone-bundle --no-tags
 
-          # Удаление проверок защищенных экспортов
-          if [ -e kernel_platform/common/BUILD.bazel ]; then
-            sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/common/BUILD.bazel
-          fi
-          if [ -e kernel_platform/msm-kernel/BUILD.bazel ]; then
-            sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/msm-kernel/BUILD.bazel
-          fi
-          rm -f kernel_platform/common/android/abi_gki_protected_exports_* || echo "No protected exports!"
-          rm -f kernel_platform/msm-kernel/android/abi_gki_protected_exports_* || echo "No protected exports!"
-          sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
-          sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
-          sed -i 's/ -dirty//g' kernel_platform/external/dtc/scripts/setlocalversion
-      
       - name: SukiSU-Ultra & SukiSU version
         if: ${{ github.event.inputs.kernelsu_variant == 'SukiSU-Ultra' || github.event.inputs.kernelsu_variant == 'SukiSU' }}
         run: |
