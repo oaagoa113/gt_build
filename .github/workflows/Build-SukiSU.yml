@@ -123,6 +123,14 @@ jobs:
           mkdir kernel_workspace && cd kernel_workspace
           repo init -u https://github.com/oaagoa113/gt_build.git -b main -m manifest_realme.xml --depth=1
           repo sync
+          echo "Listing directory contents after repo sync:"
+          ls -la
+          echo "Listing kernel_platform directory:"
+          ls -la kernel_platform || echo "kernel_platform directory not found"
+          echo "Listing kernel_platform/common directory:"
+          ls -la kernel_platform/common || echo "kernel_platform/common directory not found"
+          echo "Listing kernel_platform/msm-kernel directory:"
+          ls -la kernel_platform/msm-kernel || echo "kernel_platform/msm-kernel directory not found"
           if [  -e kernel_platform/common/BUILD.bazel ]; then
           sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/common/BUILD.bazel
           fi
@@ -135,18 +143,22 @@ jobs:
       # 删除 -dirty 后缀
       - name: Force remove -dirty suffix
         run: |
-          cd kernel_workspace
-          if [ -f kernel_platform/common/scripts/setlocalversion ]; then
-            sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
+          echo "Current directory: $(pwd)"
+          echo "Listing directory contents:"
+          ls -la
+          echo "Listing kernel_workspace directory:"
+          ls -la kernel_workspace || echo "kernel_workspace directory not found"
+          if [ -f kernel_workspace/kernel_platform/common/scripts/setlocalversion ]; then
+            sed -i 's/ -dirty//g' kernel_workspace/kernel_platform/common/scripts/setlocalversion
           fi
-          if [ -f kernel_platform/msm-kernel/scripts/setlocalversion ]; then
-            sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
+          if [ -f kernel_workspace/kernel_platform/msm-kernel/scripts/setlocalversion ]; then
+            sed -i 's/ -dirty//g' kernel_workspace/kernel_platform/msm-kernel/scripts/setlocalversion
           fi
-          if [ -f kernel_platform/external/dtc/scripts/setlocalversion ]; then
-            sed -i 's/ -dirty//g' kernel_platform/external/dtc/scripts/setlocalversion
+          if [ -f kernel_workspace/kernel_platform/external/dtc/scripts/setlocalversion ]; then
+            sed -i 's/ -dirty//g' kernel_workspace/kernel_platform/external/dtc/scripts/setlocalversion
           fi
-          if [ -f kernel_platform/common/scripts/setlocalversion ]; then
-            sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' kernel_platform/common/scripts/setlocalversion
+          if [ -f kernel_workspace/kernel_platform/common/scripts/setlocalversion ]; then
+            sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' kernel_workspace/kernel_platform/common/scripts/setlocalversion
           fi
           cd kernel_workspace/kernel_platform
           git add -A
