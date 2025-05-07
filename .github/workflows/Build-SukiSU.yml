@@ -182,7 +182,9 @@ jobs:
         run: |
           cd kernel_workspace
           git clone https://gitlab.com/simonpunk/susfs4ksu.git -b gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}
-          git clone https://github.com/ShirkNeko/SukiSU_patch.git
+          git clone https://github.com/ShirkNeko/SukiSU_KernelPatch_patch.git SukiSU_patch
+          echo "Listing SukiSU_patch directory structure:"
+          ls -R SukiSU_patch/
           cd kernel_platform
           echo "正在给内核打susfs补丁"
           cp ../susfs4ksu/kernel_patches/50_add_susfs_in_gki-${{ github.event.inputs.ANDROID_VERSION }}-${{ github.event.inputs.KERNEL_VERSION }}.patch ./common/
@@ -191,11 +193,21 @@ jobs:
 
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
           echo "正在给内核打zram补丁"
-          cp -r ../SukiSU_patch/other/zram/lz4k/include/linux/* ./common/include/linux
-          cp -r ../SukiSU_patch/other/zram/lz4k/lib/* ./common/lib
-          cp -r ../SukiSU_patch/other/zram/lz4k/crypto/* ./common/crypto
-          cp -r ../SukiSU_patch/other/zram/zstdn ./common/lib/
-          cp -r ../SukiSU_patch/other/zram/lz4k_oplus ./common/lib/
+          if [ -d "../SukiSU_patch/kernel/zram/lz4k/include/linux" ]; then
+            cp -r ../SukiSU_patch/kernel/zram/lz4k/include/linux/* ./common/include/linux
+          fi
+          if [ -d "../SukiSU_patch/kernel/zram/lz4k/lib" ]; then
+            cp -r ../SukiSU_patch/kernel/zram/lz4k/lib/* ./common/lib
+          fi
+          if [ -d "../SukiSU_patch/kernel/zram/lz4k/crypto" ]; then
+            cp -r ../SukiSU_patch/kernel/zram/lz4k/crypto/* ./common/crypto
+          fi
+          if [ -d "../SukiSU_patch/kernel/zram/zstdn" ]; then
+            cp -r ../SukiSU_patch/kernel/zram/zstdn ./common/lib/
+          fi
+          if [ -d "../SukiSU_patch/kernel/zram/lz4k_oplus" ]; then
+            cp -r ../SukiSU_patch/kernel/zram/lz4k_oplus ./common/lib/
+          fi
           fi
 
           cd ./common
@@ -205,33 +217,49 @@ jobs:
       - name: Apply Hide Stuff Patches
         run: |
           cd kernel_workspace/kernel_platform/common
-          cp ../../SukiSU_patch/69_hide_stuff.patch ./
-          echo "正在打隐藏应用补丁"
-          patch -p1 -F 3 < 69_hide_stuff.patch
+          if [ -f "../../SukiSU_patch/patch/69_hide_stuff.patch" ]; then
+            cp ../../SukiSU_patch/patch/69_hide_stuff.patch ./
+            echo "正在打隐藏应用补丁"
+            patch -p1 -F 3 < 69_hide_stuff.patch
+          else
+            echo "Hide stuff patch not found, skipping"
+          fi
 
       - name: Apply VFS
         run: |
           cd kernel_workspace/kernel_platform/common
           if [ "${{ github.event.inputs.VFS }}" = "true" ]; then
-          cp ../../SukiSU_patch/hooks/syscall_hooks.patch ./
-          echo "正在打vfs补丁"
-          patch -p1 -F 3 < syscall_hooks.patch
-          echo "vfs_patch完成"
+            if [ -f "../../SukiSU_patch/patch/syscall_hooks.patch" ]; then
+              cp ../../SukiSU_patch/patch/syscall_hooks.patch ./
+              echo "正在打vfs补丁"
+              patch -p1 -F 3 < syscall_hooks.patch
+              echo "vfs_patch完成"
+            else
+              echo "VFS patch not found, skipping"
+            fi
           fi
 
       - name: Apply LZ4KD&ZSTDN
         run: |
           cd kernel_workspace/kernel_platform/common
           if [ "${{ github.event.inputs.ZRAM }}" = "true" ]; then
-            cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/lz4kd.patch ./
-            echo "正在打lz4kd补丁"
-            patch -p1 -F 3 < lz4kd.patch || true
-            echo '完成LZ4KD补丁'
+            if [ -f "../../SukiSU_patch/kernel/zram/patches/${{ github.event.inputs.KERNEL_VERSION }}/lz4kd.patch" ]; then
+              cp ../../SukiSU_patch/kernel/zram/patches/${{ github.event.inputs.KERNEL_VERSION }}/lz4kd.patch ./
+              echo "正在打lz4kd补丁"
+              patch -p1 -F 3 < lz4kd.patch || true
+              echo '完成LZ4KD补丁'
+            else
+              echo "LZ4KD patch not found, skipping"
+            fi
 
-            cp ../../SukiSU_patch/other/zram/zram_patch/${{ github.event.inputs.KERNEL_VERSION }}/zstdn.patch ./
-            echo "正在打zstdn补丁"
-            patch -p1 -F 3 < zstdn.patch || true
-            echo '完成ZSTDN补丁'
+            if [ -f "../../SukiSU_patch/kernel/zram/patches/${{ github.event.inputs.KERNEL_VERSION }}/zstdn.patch" ]; then
+              cp ../../SukiSU_patch/kernel/zram/patches/${{ github.event.inputs.KERNEL_VERSION }}/zstdn.patch ./
+              echo "正在打zstdn补丁"
+              patch -p1 -F 3 < zstdn.patch || true
+              echo '完成ZSTDN补丁'
+            else
+              echo "ZSTDN patch not found, skipping"
+            fi
           fi
 
       # 配置信息
