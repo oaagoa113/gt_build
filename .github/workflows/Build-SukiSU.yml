@@ -107,7 +107,7 @@ jobs:
 
       - name: Install repo tool
         run: |
-          git clone https://github.com/git-repo/git-repo.git
+          git clone https://${{ github.token }}@github.com/git-repo/git-repo.git
           sudo cp git-repo/repo /usr/local/bin/repo
           sudo chmod a+x /usr/local/bin/repo
           rm -rf git-repo
@@ -115,7 +115,7 @@ jobs:
       - name: Initialize repo and sync
         run: |
           mkdir kernel_workspace && cd kernel_workspace
-          repo init -u https://github.com/oaagoa113/gt_build.git -b main -m manifest_realme.xml --depth=1 --repo-url=https://github.com/git-repo/git-repo.git
+          repo init -u https://${{ github.token }}@github.com/oaagoa113/gt_build.git -b main -m manifest_realme.xml --depth=1 --repo-url=https://github.com/git-repo/git-repo.git
           repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
           if [  -e kernel_platform/common/BUILD.bazel ]; then
           sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/common/BUILD.bazel
