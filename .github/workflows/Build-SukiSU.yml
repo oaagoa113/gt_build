@@ -142,6 +142,16 @@ jobs:
           # Создаем символическую ссылку на Bazel после repo sync
           mkdir -p kernel_platform/tools
           ln -sf /usr/local/bin/bazel kernel_platform/tools/bazel
+          # Создаем необходимые директории и файлы для Bazel
+          mkdir -p kernel_platform/build/kernel/kleaf
+          touch kernel_platform/build/kernel/kleaf/BUILD
+          mkdir -p kernel_platform/build/kernel
+          touch kernel_platform/build/kernel/BUILD
+          mkdir -p kernel_platform/build
+          touch kernel_platform/build/BUILD
+          # Создаем символические ссылки для bazel файлов
+          ln -sf ../msm-kernel/msm_kernel_extensions.bzl kernel_platform/build/msm_kernel_extensions.bzl
+          ln -sf ../bootable/bootloader/edk2/abl_extensions.bzl kernel_platform/build/abl_extensions.bzl
 
       # 删除 -dirty 后缀
       - name: Force remove -dirty suffix
