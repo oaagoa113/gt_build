@@ -139,6 +139,9 @@ jobs:
           fi
           rm kernel_platform/common/android/abi_gki_protected_exports_* || echo "No protected exports!"
           rm kernel_platform/msm-kernel/android/abi_gki_protected_exports_* || echo "No protected exports!"
+          # Создаем символическую ссылку на Bazel после repo sync
+          mkdir -p kernel_platform/tools
+          ln -sf /usr/local/bin/bazel kernel_platform/tools/bazel
 
       # 删除 -dirty 后缀
       - name: Force remove -dirty suffix
@@ -331,6 +334,11 @@ jobs:
           cd kernel_workspace
           export PATH=$PATH:$(pwd)/kernel_platform/prebuilts/bazel/linux-x86_64
           export BAZEL_BIN=/usr/local/bin/bazel
+          export BAZEL_PATH=$(pwd)/kernel_platform/tools/bazel
+          echo "Bazel path: $BAZEL_PATH"
+          echo "Bazel binary: $BAZEL_BIN"
+          echo "Listing kernel_platform/tools directory:"
+          ls -la kernel_platform/tools
           ./kernel_platform/build_with_bazel.py -t ${{ github.event.inputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
 
       - name: Make AnyKernel3
