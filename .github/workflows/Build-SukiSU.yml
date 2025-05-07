@@ -149,9 +149,21 @@ jobs:
           touch kernel_platform/build/kernel/BUILD
           mkdir -p kernel_platform/build
           touch kernel_platform/build/BUILD
+          # Создаем файл workspace.bzl
+          cat > kernel_platform/build/kernel/kleaf/workspace.bzl << 'EOF'
+def register_workspace():
+    pass
+EOF
           # Создаем символические ссылки для bazel файлов
           ln -sf ../msm-kernel/msm_kernel_extensions.bzl kernel_platform/build/msm_kernel_extensions.bzl
           ln -sf ../bootable/bootloader/edk2/abl_extensions.bzl kernel_platform/build/abl_extensions.bzl
+          # Создаем файл WORKSPACE
+          cat > kernel_platform/WORKSPACE << 'EOF'
+workspace(name = "kernel_platform")
+
+load("//build/kernel/kleaf:workspace.bzl", "register_workspace")
+register_workspace()
+EOF
 
       # 删除 -dirty 后缀
       - name: Force remove -dirty suffix
