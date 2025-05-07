@@ -119,6 +119,7 @@ jobs:
 
       - name: Initialize repo and sync
         run: |
+          rm -rf kernel_workspace
           mkdir kernel_workspace && cd kernel_workspace
           repo init -u https://github.com/oaagoa113/gt_build.git -b main -m manifest_realme.xml --depth=1
           repo sync
