@@ -163,6 +163,15 @@ EOF
           # Создаем символические ссылки для bazel файлов
           ln -sf ../msm-kernel/msm_kernel_extensions.bzl kernel_platform/build/msm_kernel_extensions.bzl
           ln -sf ../bootable/bootloader/edk2/abl_extensions.bzl kernel_platform/build/abl_extensions.bzl
+          # Устанавливаем правильные права доступа
+          chmod -R 755 kernel_platform/build
+          chmod -R 755 kernel_platform/tools
+          # Проверяем структуру директорий
+          echo "Checking directory structure:"
+          tree kernel_platform/build
+          echo "Checking file permissions:"
+          ls -la kernel_platform/build/kernel/kleaf/
+          ls -la kernel_platform/tools/
 
       # 删除 -dirty 后缀
       - name: Force remove -dirty suffix
