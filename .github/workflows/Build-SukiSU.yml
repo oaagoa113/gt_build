@@ -90,7 +90,13 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt update && sudo apt upgrade -y
-          sudo apt install -y python3 git curl
+          sudo apt install -y python3 git curl wget unzip
+          # Установка Bazel
+          wget https://github.com/bazelbuild/bazel/releases/download/6.4.0/bazel-6.4.0-linux-x86_64
+          chmod +x bazel-6.4.0-linux-x86_64
+          sudo mv bazel-6.4.0-linux-x86_64 /usr/local/bin/bazel
+          mkdir -p kernel_workspace/kernel_platform/tools
+          ln -sf /usr/local/bin/bazel kernel_workspace/kernel_platform/tools/bazel
 
       - name: Show selected inputs debug
         run: |
@@ -302,6 +308,7 @@ jobs:
         run: |
           cd kernel_workspace
           export PATH=$PATH:$(pwd)/kernel_platform/prebuilts/bazel/linux-x86_64
+          export BAZEL_BIN=/usr/local/bin/bazel
           ./kernel_platform/build_with_bazel.py -t ${{ github.event.inputs.CPUD }} ${{ github.event.inputs.BUILD_METHOD }}
 
       - name: Make AnyKernel3
