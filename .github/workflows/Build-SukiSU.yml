@@ -114,8 +114,8 @@ jobs:
       - name: Initialize repo and sync
         run: |
           mkdir kernel_workspace && cd kernel_workspace
-          repo init -u https://github.com/oaagoa113/gt_build.git -b main -m manifest_realme.xml --depth=1
-          repo sync
+          repo init -u https://github.com/oaagoa113/gt_build.git -b main -m manifest_realme.xml --depth=1 --repo-url=https://storage.googleapis.com/git-repo-downloads/repo
+          repo sync -c -j$(nproc --all) --force-sync --no-clone-bundle --no-tags
           if [  -e kernel_platform/common/BUILD.bazel ]; then
           sed -i '/^[[:space:]]*"protected_exports_list"[[:space:]]*:[[:space:]]*"android\/abi_gki_protected_exports_aarch64",$/d' kernel_platform/common/BUILD.bazel
           fi
