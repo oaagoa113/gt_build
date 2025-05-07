@@ -134,13 +134,22 @@ jobs:
       # 删除 -dirty 后缀
       - name: Force remove -dirty suffix
         run: |
+          cd kernel_workspace
+          if [ -f kernel_platform/common/scripts/setlocalversion ]; then
+            sed -i 's/ -dirty//g' kernel_platform/common/scripts/setlocalversion
+          fi
+          if [ -f kernel_platform/msm-kernel/scripts/setlocalversion ]; then
+            sed -i 's/ -dirty//g' kernel_platform/msm-kernel/scripts/setlocalversion
+          fi
+          if [ -f kernel_platform/external/dtc/scripts/setlocalversion ]; then
+            sed -i 's/ -dirty//g' kernel_platform/external/dtc/scripts/setlocalversion
+          fi
+          if [ -f kernel_platform/common/scripts/setlocalversion ]; then
+            sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' kernel_platform/common/scripts/setlocalversion
+          fi
           cd kernel_workspace/kernel_platform
-          sed -i 's/ -dirty//g' common/scripts/setlocalversion
-          sed -i 's/ -dirty//g' msm-kernel/scripts/setlocalversion
-          sed -i 's/ -dirty//g' external/dtc/scripts/setlocalversion
-          sed -i '$i res=$(echo "$res" | sed '\''s/-dirty//g'\'')' common/scripts/setlocalversion
           git add -A
-          git commit -m "Force remove -dirty suffix from kernel version"
+          git commit -m "Force remove -dirty suffix from kernel version" || true
 
       # 添加 SukiSU Ultra
       - name: Add KernelSU-SukiSU Ultra
