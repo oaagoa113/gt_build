@@ -107,9 +107,10 @@ jobs:
 
       - name: Install repo tool
         run: |
-          curl -L https://github.com/git-repo/git-repo/raw/main/repo > ~/repo
-          chmod a+x ~/repo
-          sudo mv ~/repo /usr/local/bin/repo
+          git clone https://github.com/git-repo/git-repo.git
+          sudo cp git-repo/repo /usr/local/bin/repo
+          sudo chmod a+x /usr/local/bin/repo
+          rm -rf git-repo
 
       - name: Initialize repo and sync
         run: |
